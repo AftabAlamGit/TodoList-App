@@ -1,6 +1,9 @@
 package com.example.todolist;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -8,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import com.example.todolist.database.AppDatabase;
@@ -74,8 +78,6 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.ItemC
                         List<TaskEntry> tasks = mAdapter.getTasks();
                         // Call deleteTask in the taskDao with the task at that position
                         mDb.taskDao().deleteTask(tasks.get(position));
-                        // Call retrieveTasks method to refresh the UI
-                        retrieveTasks();
                     }
                 });
             }
@@ -99,37 +101,20 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.ItemC
 
         // Initialize member variable for the data base
         mDb = AppDatabase.getInstance(getApplicationContext());
-    }
-
-    /**
-     * This method is called after this activity has been paused or restarted.
-     * Often, this is after new data has been inserted through an AddTaskActivity,
-     * so this re-queries the database data for any changes.
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
         retrieveTasks();
     }
 
     private void retrieveTasks() {
-        // Get the diskIO Executor from the instance of AppExecutors and
-        // call the diskIO execute method with a new Runnable and implement its run method
-        AppExecutors.getInstance().diskIO().execute(new Runnable() {
+        Log.d(TAG, "Actively retrieving the tasks from the DataBase");
+        // Extract all this logic outside the Executor and remove the Executor
+        // Fix compile issue by wrapping the return type with LiveData
+        LiveData<List<TaskEntry>> tasks = mDb.taskDao().loadAllTasks();
+        // Observe tasks and move the logic from runOnUiThread to onChanged
+        tasks.observe(this, new Observer<List<TaskEntry>>() {
             @Override
-            public void run() {
-                // Move the logic into the run method and
-                // Extract the list of tasks to a final variable
-                final List<TaskEntry> tasks = mDb.taskDao().loadAllTasks();
-                //  Wrap the setTask call in a call to runOnUiThread
-                // We will be able to simplify this once we learn more
-                // about Android Architecture Components
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mAdapter.setTasks(tasks);
-                    }
-                });
+            public void onChanged(@Nullable List<TaskEntry> taskEntries) {
+                Log.d(TAG, "Receiving database update from LiveData");
+                mAdapter.setTasks(taskEntries);
             }
         });
     }
