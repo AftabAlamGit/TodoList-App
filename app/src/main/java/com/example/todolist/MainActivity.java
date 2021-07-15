@@ -11,7 +11,10 @@ import android.os.Bundle;
 import android.view.View;
 
 import com.example.todolist.database.AppDatabase;
+import com.example.todolist.database.TaskEntry;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.util.List;
 
 import static androidx.recyclerview.widget.DividerItemDecoration.VERTICAL;
 
@@ -91,9 +94,25 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.ItemC
     @Override
     protected void onResume() {
         super.onResume();
-        // Call the adapter's setTasks method using the result
-        // of the loadAllTasks method from the taskDao
-        mAdapter.setTasks(mDb.taskDao().loadAllTasks());
+        // Get the diskIO Executor from the instance of AppExecutors and
+        // call the diskIO execute method with a new Runnable and implement its run method
+        AppExecutors.getInstance().diskIO().execute(new Runnable() {
+            @Override
+            public void run() {
+                // Move the logic into the run method and
+                // Extract the list of tasks to a final variable
+                final List<TaskEntry> tasks = mDb.taskDao().loadAllTasks();
+                //  Wrap the setTask call in a call to runOnUiThread
+                // We will be able to simplify this once we learn more
+                // about Android Architecture Components
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mAdapter.setTasks(tasks);
+                    }
+                });
+            }
+        });
     }
 
     @Override

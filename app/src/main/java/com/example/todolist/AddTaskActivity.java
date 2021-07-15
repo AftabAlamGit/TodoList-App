@@ -105,10 +105,14 @@ public class AddTaskActivity extends AppCompatActivity {
 
         //Create taskEntry variable using the variables defined above
         TaskEntry taskEntry = new TaskEntry(description, priority, date);
-        //Use the taskDao in the AppDatabase variable to insert the taskEntry
-        mDb.taskDao().insertTask(taskEntry);
-        //call finish() to come back to MainActivity
-        finish();
+
+        AppExecutors.getInstance().diskIO().execute(() ->{
+            //Use the taskDao in the AppDatabase variable to insert the taskEntry
+            mDb.taskDao().insertTask(taskEntry);
+            //call finish() to come back to MainActivity
+            finish();
+        });
+
     }
 
     /**
