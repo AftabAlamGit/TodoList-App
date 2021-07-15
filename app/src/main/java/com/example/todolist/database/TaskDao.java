@@ -27,5 +27,5 @@ public interface TaskDao {
 
     // The query for this method should get all the data for that id in the task table
     @Query("SELECT * FROM task WHERE id = :id")
-    TaskEntry loadTaskById(int id);
+    LiveData<TaskEntry> loadTaskById(int id);
 }
