@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
+import com.example.todolist.database.AppDatabase;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import static androidx.recyclerview.widget.DividerItemDecoration.VERTICAL;
@@ -22,11 +23,13 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.ItemC
     private RecyclerView mRecyclerView;
     private TaskAdapter mAdapter;
 
+    // AppDatabase member variable for the Database
+    private AppDatabase mDb;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
         // Set the RecyclerView to its corresponding view
         mRecyclerView = findViewById(R.id.recyclerViewTasks);
@@ -75,6 +78,22 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.ItemC
                 startActivity(addTaskIntent);
             }
         });
+
+        // Initialize member variable for the data base
+        mDb = AppDatabase.getInstance(getApplicationContext());
+    }
+
+    /**
+     * This method is called after this activity has been paused or restarted.
+     * Often, this is after new data has been inserted through an AddTaskActivity,
+     * so this re-queries the database data for any changes.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Call the adapter's setTasks method using the result
+        // of the loadAllTasks method from the taskDao
+        mAdapter.setTasks(mDb.taskDao().loadAllTasks());
     }
 
     @Override
