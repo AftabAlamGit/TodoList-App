@@ -56,6 +56,27 @@ public class AddTaskActivity extends AppCompatActivity {
             mButton.setText(R.string.update_button);
             if (mTaskId == DEFAULT_TASK_ID) {
                 // populate the UI
+                // Use DEFAULT_TASK_ID as the default
+                mTaskId = intent.getIntExtra(EXTRA_TASK_ID, DEFAULT_TASK_ID);
+
+                // call the diskIO execute method with a new Runnable and implement its run method
+                AppExecutors.getInstance().diskIO().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Use the loadTaskById method to retrieve the task with id mTaskId and
+                        // assign its value to a final TaskEntry variable
+                        final TaskEntry task = mDb.taskDao().loadTaskById(mTaskId);
+                        // Remember to wrap it in a call to runOnUiThread
+                        // We will be able to simplify this once we learn more
+                        // about Android Architecture Components
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                populateUI(task);
+                            }
+                        });
+                    }
+                });
             }
         }
     }
@@ -88,7 +109,14 @@ public class AddTaskActivity extends AppCompatActivity {
      * @param task the taskEntry to populate the UI
      */
     private void populateUI(TaskEntry task) {
+        // return if the task is null
+        if (task == null) {
+            return;
+        }
 
+        // use the variable task to populate the UI
+        mEditText.setText(task.getDescription());
+        setPriorityInViews(task.getPriority());
     }
 
     /**
@@ -103,16 +131,24 @@ public class AddTaskActivity extends AppCompatActivity {
         //Create a date variable and assign to it the current Date
         Date date = new Date();
 
-        //Create taskEntry variable using the variables defined above
-        TaskEntry taskEntry = new TaskEntry(description, priority, date);
-
-        AppExecutors.getInstance().diskIO().execute(() ->{
-            //Use the taskDao in the AppDatabase variable to insert the taskEntry
-            mDb.taskDao().insertTask(taskEntry);
-            //call finish() to come back to MainActivity
-            finish();
+        final TaskEntry task = new TaskEntry(description, priority, date);
+        AppExecutors.getInstance().diskIO().execute(new Runnable() {
+            @Override
+            public void run() {
+                // insert the task only if mTaskId matches DEFAULT_TASK_ID
+                // Otherwise update it
+                // call finish in any case
+                if (mTaskId == DEFAULT_TASK_ID) {
+                    // insert new task
+                    mDb.taskDao().insertTask(task);
+                } else {
+                    //update task
+                    task.setId(mTaskId);
+                    mDb.taskDao().updateTask(task);
+                }
+                finish();
+            }
         });
-
     }
 
     /**
